@@ -10,16 +10,22 @@ The dataset contains customer demographics, service usage, billing information, 
 
 ## Project Structure
 Customer-Churn/
+│
 ├── notebook/
-│ └── churn.ipynb
+│   └── churn.ipynb
+│
 ├── src/
-│ └── churn_model.py
+│   └── churn_model.py
+│
 ├── data/
-│ └── WA_Fn-UseC_-Telco-Customer-Churn.csv
+│   └── WA_Fn-UseC_-Telco-Customer-Churn.csv
+│
 ├── plots/
-│ └── all the plots 
+│   └── (saved visualization images)
+│
 ├── README.md
 └── requirements.txt
+
 
 ## Plots
 ![alt text](plots/Corr_matrix.png)
