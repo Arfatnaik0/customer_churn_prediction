@@ -2,10 +2,6 @@
 import numpy as np
 import pandas as pd
 
-# import visualization libraries
-import matplotlib.pyplot as plt
-import seaborn as sns
-
 # load dataset
 churn = pd.read_csv('..\\data\\WA_Fn-UseC_-Telco-Customer-Churn.csv')
 
@@ -23,67 +19,61 @@ for col in cols:
     churn[col] = churn[col].replace(replace_dict)
 
 
-churn=pd.get_dummies(churn,
-                     columns=['gender','Partner','Dependents','PhoneService',
-                              'MultipleLines','InternetService','OnlineSecurity','OnlineBackup',
-                              'DeviceProtection','TechSupport','StreamingTV','StreamingMovies',
-                              'Contract','PaperlessBilling','PaymentMethod','Churn'],
-                     drop_first=True,dtype=int)
-
-
-
 # import ml libraries
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler,OneHotEncoder
 from sklearn.linear_model import LogisticRegression
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report,confusion_matrix,roc_auc_score
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+import joblib
+
+
+# x and y split
+x=churn.drop('Churn', axis=1)
+y=churn['Churn'].map({'Yes': 1, 'No': 0})
+
+# identify numerical and categorical columns
+num_cols=['tenure','MonthlyCharges','TotalCharges']
+cat_cols=[column for column in x.columns if column not in num_cols]
+
+# preprocessing pipelines for both numeric and categorical data
+numeric_transformer = Pipeline(steps=[
+    ('scaler', StandardScaler())
+])
+
+categorical_transformer = Pipeline(steps=[
+    ('onehot', OneHotEncoder(drop='first', handle_unknown='ignore'))
+])
+
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', numeric_transformer, num_cols),
+        ('cat', categorical_transformer, cat_cols)
+    ]
+)
+
+# complete pipeline with logistic regression
+model=Pipeline(steps=[
+    ('preprocessor', preprocessor),
+    ('classifier', LogisticRegression(class_weight='balanced'))
+])
 
 # train test split
-x = churn.drop('Churn_Yes',axis=1)
-y = churn['Churn_Yes']
-x_train,x_test,y_train,y_test=train_test_split(x,y,test_size=0.2,random_state=42)
+x_train,x_test,y_train,y_test=train_test_split(x,y,test_size=0.2,random_state=42,stratify=y)
 
-# logistic regression model
-logmodel=LogisticRegression(class_weight='balanced')
-scaler=StandardScaler()
-x_train_scaled=scaler.fit_transform(x_train)
-x_test_scaled=scaler.transform(x_test)
-logmodel.fit(x_train_scaled,y_train)
-y_prob=logmodel.predict_proba(x_test_scaled)[:,1]
+# fit the model
+model.fit(x_train,y_train)
+y_prob=model.predict_proba(x_test)[:,1]
 y_pred=(y_prob>0.4).astype(int)
+
 # metrics
 print(classification_report(y_test,y_pred))
 print(confusion_matrix(y_test,y_pred))
 print(f'ROC-AUC score:{roc_auc_score(y_test,y_prob)}')
 
-
-# decision tree model
-dtree=DecisionTreeClassifier(class_weight='balanced')
-dtree.fit(x_train,y_train)
-y_prob=dtree.predict_proba(x_test)[:,1]
-y_pred=(y_prob>0.4).astype(int)
-# metrics
-print(classification_report(y_test,y_pred))
-print(confusion_matrix(y_test,y_pred))
-print("ROC-AUC:", roc_auc_score(y_test, y_prob))
-
-
-# random forest model
-rfmodel=RandomForestClassifier(class_weight='balanced',n_estimators=200)
-rfmodel.fit(x_train,y_train)
-y_prob=rfmodel.predict_proba(x_test)[:,1]
-y_pred=(y_prob>0.4).astype(int)
-# metrics
-print(classification_report(y_test,y_pred))
-print(confusion_matrix(y_test,y_pred))
-print("ROC-AUC:", roc_auc_score(y_test, y_prob))
-
-
-# Logistic Regression gives the best results here
-# Logistic Regression achieved the highest ROC-AUC (0.86) and recall (0.88),
-# making it the most suitable model when the business objective is to identify maximum churn customers.
+# save the model
+joblib.dump(model,'..\\model\\churn_model.pkl')
 
 
 
