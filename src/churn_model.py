@@ -53,7 +53,7 @@ preprocessor = ColumnTransformer(
 # complete pipeline with logistic regression
 model=Pipeline(steps=[
     ('preprocessor', preprocessor),
-    ('classifier', LogisticRegression(class_weight='balanced'))
+    ('classifier', LogisticRegression(class_weight='balanced', C=1))
 ])
 
 # fit the model
